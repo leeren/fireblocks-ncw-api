@@ -1,0 +1,213 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-ncw
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: leeren@dopamine.xyz
+    privateKeySecretRef:
+      name: letsencrypt-ncw
+    solvers:
+    - http01:
+        ingress:
+          ingressClassName: nginx-ncw
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    iam.gke.io/gcp-service-account: fireblocks-ncw@dopamine-dao.iam.gserviceaccount.com
+  name: fireblocks-ncw
+  namespace: ncw
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dopamine-api
+  namespace: ncw
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-ncw
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: PUT, GET, POST, OPTIONS
+spec:
+  ingressClassName: nginx-ncw
+  tls:
+    - hosts:
+        - ncw-api.dopamine.xyz
+      secretName: cert-creds
+  rules:
+    - host: ncw-api.dopamine.xyz
+      http:
+        paths:
+          - backend:
+              service:
+                name: ncw-api
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
+    - host: ncw.dopamine.xyz
+      http:
+        paths:
+          - backend:
+              service:
+                name: ncw-app
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ncw-api
+  namespace: ncw
+spec:
+  ports:
+    - port: 80
+      targetPort: 8081
+      protocol: TCP
+      name: http
+  selector:
+    app: ncw-api
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-sql-proxy
+  namespace: ncw
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: cloud-sql-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ncw-app
+  namespace: ncw
+spec:
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
+      name: http
+  selector:
+    app: ncw-app
+  type: NodePort
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cloud-sql-proxy
+  namespace: ncw
+  labels:
+    app: cloud-sql-proxy
+spec:
+  serviceAccountName: fireblocks-ncw
+  containers:
+    - name: cloud-sql-proxy
+      image: gcr.io/cloudsql-docker/gce-proxy:1.28.0
+      command:
+        - /cloud_sql_proxy
+        - -instances=dopamine-dao:us-central1:dopamine-db=tcp:0.0.0.0:5432
+      securityContext:
+        runAsNonRoot: true
+      resources:
+        requests:
+          memory: 100Mi
+          cpu: 100m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ncw-api
+  namespace: ncw
+spec:
+  replicas: 1
+  progressDeadlineSeconds: 150
+  selector:
+    matchLabels:
+      app: ncw-api
+  template:
+    metadata:
+      labels:
+        app: ncw-api
+    spec:
+      serviceAccountName: fireblocks-ncw
+      nodeSelector:
+        iam.gke.io/gke-metadata-server-enabled: "true"
+      containers:
+      - name: cloud-sql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.28.0
+        command:
+        - /cloud_sql_proxy
+        - -instances=dopamine-dao:us-central1:dopamine-db=tcp:5432
+        securityContext:
+          runAsNonRoot: true
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: "1"
+      - name: esp
+        image: gcr.io/endpoints-release/endpoints-runtime:1
+        args:
+        - --http_port
+        - "8081"
+        - --backend
+        - 127.0.0.1:8080
+        - --service
+        - $(API_HOST)
+        - --rollout_strategy
+        - managed
+        ports:
+        - containerPort: 8081
+        env:
+        - name: API_HOST
+          value: ncw-api.dopamine.xyz
+      - name: dopamine-api
+        image: gcr.io/dopamine-dao/dopamine-api:01af611
+        command:
+        - node
+        - ./dist/index.js
+        env:
+        - name: ENV
+          value: dev
+        ports:
+        - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ncw-app
+  namespace: ncw
+spec:
+  replicas: 1
+  progressDeadlineSeconds: 150
+  selector:
+    matchLabels:
+      app: ncw-app
+  template:
+    metadata:
+      labels:
+        app: ncw-app
+    spec:
+      serviceAccountName: fireblocks-ncw
+      nodeSelector:
+        iam.gke.io/gke-metadata-server-enabled: "true"
+      containers:
+      - name: ncw-app
+        image: gcr.io/dopamine-dao/ncw-app:04c39e0
+        command:
+        - yarn
+        - start
+        env:
+        - name: ENV
+          value: dev
+        ports:
+        - containerPort: 3000

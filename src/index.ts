@@ -1,6 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import config, { Env } from './config/index.js';
+import ncwRoutes from './routes/ncw/index.js';
 
 const fastify = Fastify({
 	logger: {
@@ -10,6 +11,8 @@ const fastify = Fastify({
 });
 
 await fastify.register(cors, {});
+
+fastify.register(ncwRoutes, { prefix: '/ncw', logLevel: 'warn'});
 
 const start = async () => {
 	const port = Number(process.env.NODE_PORT) || 8080;
