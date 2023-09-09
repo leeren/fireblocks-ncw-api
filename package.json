@@ -1,0 +1,32 @@
+{
+  "name": "fireblocks-ncw-api",
+  "version": "1.0.0",
+  "description": "Permissionless Hackathon Fireblocks NCW API",
+  "main": "index.js",
+  "type": "module",
+  "repository": "git@github.com:leeren/fireblocks-ncw-api.git",
+  "author": "leeren",
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf ./dist",
+    "build": "yarn run clean && tsc",
+    "start": "node dist",
+    "dev": "nodemon --watch 'src/**' --ext 'ts,json' --exec 'ts-node --esm src/index.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "^20.6.0",
+    "nodemon": "^3.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  },
+  "nodemonConfig": {
+    "execMap": {
+      "ts": "ts-node"
+    }
+  },
+  "dependencies": {
+    "@fastify/cors": "^8.3.0",
+    "dotenv": "^16.3.1",
+    "fastify": "^4.22.2"
+  }
+}
