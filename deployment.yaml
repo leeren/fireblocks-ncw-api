@@ -171,7 +171,7 @@ spec:
         - name: API_HOST
           value: ncw-api.dopamine.xyz
       - name: dopamine-api
-        image: gcr.io/dopamine-dao/dopamine-api:01af611
+        image: gcr.io/dopamine-dao/ncw-api:latest
         command:
         - node
         - ./dist/index.js
@@ -202,7 +202,7 @@ spec:
         iam.gke.io/gke-metadata-server-enabled: "true"
       containers:
       - name: ncw-app
-        image: gcr.io/dopamine-dao/ncw-app:04c39e0
+        image: gcr.io/dopamine-dao/ncw-app:latest
         command:
         - yarn
         - start

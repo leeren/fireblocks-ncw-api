@@ -1,0 +1,49 @@
+# [START swagger]
+swagger: '2.0'
+info:
+  description: 'NCW API'
+  title: 'NCW API'
+  version: '1.0.0'
+host: 'ncw-api.dopamine.xyz'
+x-google-endpoints:
+  - name: 'ncw-api.dopamine.xyz'
+    target: '35.236.113.132'
+    allowCors: True
+consumes:
+  - 'application/json'
+produces:
+  - 'application/json'
+schemes:
+  - 'http'
+paths:
+  '/ncw/notifications':
+    post:
+      description: 'NCW Notifications Webhook'
+      operationId: 'ncwNotificationsPoll'
+      tags: ['notifications']
+      parameters:
+        - name: name
+          in: body
+          description: 'sample name'
+          schema:
+            $ref: '#/definitions/user'
+      responses:
+        200:
+          description: 'Test poll successful'
+definitions:
+  notifications:
+    type: 'object'
+    properties:
+      name:
+        type: 'string'
+securityDefinitions:
+  jwt_signer:
+    authorizationUrl: ''
+    flow: 'implicit'
+    type: 'oauth2'
+    x-google-issuer: 'fireblocks-ncw@dopamine-dao.iam.gserviceaccount.com'
+    x-google-jwks_uri: 'https://www.googleapis.com/robot/v1/metadata/x509/fireblocks-ncw@dopamine-dao.iam.gserviceaccount.com'
+  api_key:
+    in: 'query'
+    type: 'apiKey'
+    name: 'key'

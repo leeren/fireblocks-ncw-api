@@ -12,6 +12,9 @@ enum EnvVar {
 	BOOLEAN
 }
 
+const KEY_FIREBLOCKS_WEBHOOK_PK = 'FIREBLOCKS_WEBHOOK_PUBLIC_KEY';
+const KEY_FIREBLOCKS_API_SECRET = 'FIREBLOCKS_API_SECRET';
+
 type EnvVarType = {
 	[EnvVar.STRING]: string;
 	[EnvVar.NUMBER]: number;
@@ -20,7 +23,24 @@ type EnvVarType = {
 
 type Config = {
 	env: string;
+	fireblocksWebhookPublicKey: string;
+	fireblocksApiSecret: string;
+	fireblocksApiNcwAdmin: string;
+	fireblocksApiNcwSigner: string;
+	fireblocksApiBase: string;
+	dbName: string;
+	dbHost: string;
+	dbPort: number;
+	dbUsername: string;
+	dbPassword: string;
 };
+
+const handleStringType = (key: string, value: string): string => {
+  if (key === 'FIREBLOCKS_WEBHOOK_PUBLIC_KEY' || key === 'FIREBLOCKS_API_SECRET') {
+    return value.replace(/\\n/g, '\n');
+  }
+  return value;
+}
 
 const getEnv = <T extends EnvVar>(key: string, type: T, defaultValue?: EnvVarType[T]): EnvVarType[T] => {
 
@@ -30,7 +50,7 @@ const getEnv = <T extends EnvVar>(key: string, type: T, defaultValue?: EnvVarTyp
 	}
 	switch (type) {
 		case EnvVar.STRING:
-      return value as EnvVarType[T];
+			return handleStringType(key, String(value)) as EnvVarType[T];
     case EnvVar.NUMBER:
       const numberValue = Number(value);
       if (isNaN(numberValue)) {
@@ -47,6 +67,16 @@ const getEnv = <T extends EnvVar>(key: string, type: T, defaultValue?: EnvVarTyp
 
 const config: Config = {
 	env: getEnv('ENV', EnvVar.STRING),
+	fireblocksWebhookPublicKey: getEnv('FIREBLOCKS_WEBHOOK_PUBLIC_KEY', EnvVar.STRING),
+	fireblocksApiSecret: getEnv('FIREBLOCKS_API_SECRET', EnvVar.STRING),
+	fireblocksApiNcwAdmin: getEnv('FIREBLOCKS_API_KEY_NCW_ADMIN', EnvVar.STRING),
+	fireblocksApiNcwSigner: getEnv('FIREBLOCKS_API_KEY_NCW_SIGNER', EnvVar.STRING),
+	fireblocksApiBase: getEnv('FIREBLOCKS_API_BASE_URL', EnvVar.STRING),
+	dbName: getEnv('DB_HOST', EnvVar.STRING),
+	dbUsername: getEnv('DB_USERNAME', EnvVar.STRING),
+	dbPassword: getEnv('DB_PASSWORD', EnvVar.STRING),
+	dbHost: getEnv('DB_HOST', EnvVar.STRING, '127.0.0.1'),
+	dbPort: getEnv('DB_PORT', EnvVar.NUMBER, 6379),
 };
 
 if (!Object.values(Env).includes(config.env as Env)) {
@@ -54,4 +84,3 @@ if (!Object.values(Env).includes(config.env as Env)) {
 }
 
 export default config;
-
